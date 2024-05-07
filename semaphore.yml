@@ -1,0 +1,32 @@
+version: v1.0
+name: Terraform Pipeline with Firefly
+agent:
+  machine:
+    type: e1-standard-2
+    os_image: ubuntu2004
+blocks:
+  - name: 'Run Terraform with Firefly'
+    task:
+      secrets:
+        # Please make sure that the following secret contains the "AWS_ACCESS_KEY_ID" and "AWS_SECRET_ACCESS_KEY" as environment variables.
+        - name: AWS Prod key pair
+        # Please make sure that the following secret contains the "FIREFLY_ACCESS_KEY" and "FIREFLY_SECRET_KEY" as environment variables.
+        - name: Firefly key pair
+      env_vars:
+        - name: FIREFLY_SERVER_URL
+          value: https://api2.stag.gofirefly.io/api
+
+      jobs:
+        - name: 'Run'
+          commands:
+            - checkout
+            - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/v0.3.15-INFL-9063.1/fireflyci_Linux_x86_64.tar.gz
+            - tar -xf fireflyci_Linux_x86_64.tar.gz
+            - chmod a+x fireflyci
+            - terraform init
+            # Semaphore requires that a command must end with status code 0 in order for the following command to be executed, hence the "|| true" at the end of the command.
+            # You will be able to see the actual status of each command in the Firefly UI.
+            - terraform plan -json -out=tf.plan > plan_log.jsonl || true && terraform show -json tf.plan > plan_output.json || true
+            - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json --workspace semaphore-test || true
+            - terraform apply -auto-approve -json > apply_log.jsonl || true
+            - ./fireflyci post-apply -f apply_log.jsonl --workspace semaphore-test
