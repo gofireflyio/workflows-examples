@@ -15,6 +15,9 @@ blocks:
       env_vars:
         - name: FIREFLY_SERVER_URL
           value: https://api2.stag.gofirefly.io/api
+        # Please fill in the workspace name that you want to use for this pipeline.
+        - name: WORKSPACE
+          value:
 
       jobs:
         - name: 'Run'
@@ -27,6 +30,6 @@ blocks:
             # Semaphore requires that a command must end with status code 0 in order for the following command to be executed, hence the "|| true" at the end of the command.
             # You will be able to see the actual status of each command in the Firefly UI.
             - terraform plan -json -out=tf.plan > plan_log.jsonl || true && terraform show -json tf.plan > plan_output.json || true
-            - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json --workspace semaphore-test || true
+            - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json --workspace $WORKSPACE || true
             - terraform apply -auto-approve -json > apply_log.jsonl || true
-            - ./fireflyci post-apply -f apply_log.jsonl --workspace semaphore-test
+            - ./fireflyci post-apply -f apply_log.jsonl --workspace $WORKSPACE
