@@ -13,8 +13,6 @@ blocks:
         # Please make sure that the following secret contains the "FIREFLY_ACCESS_KEY" and "FIREFLY_SECRET_KEY" as environment variables.
         - name: Firefly key pair
       env_vars:
-        - name: FIREFLY_SERVER_URL
-          value: https://api2.stag.gofirefly.io/api
         # Please fill in the workspace name that you want to use for this pipeline.
         - name: WORKSPACE
           value:
@@ -23,7 +21,7 @@ blocks:
         - name: 'Run'
           commands:
             - checkout
-            - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/v0.3.15-INFL-9063.1/fireflyci_Linux_x86_64.tar.gz
+            - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/v0.4.1/fireflyci_Linux_x86_64.tar.gz
             - tar -xf fireflyci_Linux_x86_64.tar.gz
             - chmod a+x fireflyci
             - terraform init
