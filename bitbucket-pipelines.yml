@@ -14,7 +14,7 @@ pipelines:
                 - chmod a+x fireflyci
                 - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json --workspace aws-stag
     branches:
-        master:
+        main:
             - step:
                 script:
                     - cd aws-stag
