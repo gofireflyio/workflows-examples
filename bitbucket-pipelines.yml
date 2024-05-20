@@ -1,0 +1,28 @@
+image: hashicorp/terraform:1.8.3
+pipelines:
+    default:
+        - step:
+            script:
+                - cd aws-stag
+                - terraform init
+                - terraform validate
+                - terraform plan -json -out=tf.plan > plan_log.json && terraform show -json tf.plan > plan_output.json
+                - apk add curl
+                - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz
+                - tar -xf fireflyci_Linux_x86_64.tar.gz
+                - chmod a+x fireflyci
+                - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json --workspace aws-stag
+    branches:
+        master:
+            - step:
+                script:
+                    - cd aws-stag
+                    - terraform init
+                    - terraform validate
+                    - terraform plan
+                    - terraform apply -auto-approve -json > apply_log.json
+                    - apk add curl
+                    - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz
+                    - tar -xf fireflyci_Linux_x86_64.tar.gz
+                    - chmod a+x fireflyci
+                    - ./fireflyci post-apply -f apply_log.jsonl --workspace aws-stag
