@@ -41,4 +41,3 @@ apply:
     - ./fireflyci post-apply -f apply_log.jsonl --workspace $WORKING_DIR
   rules:
     - if: '$CI_COMMIT_BRANCH == "main"'
-  allow_failure: true
