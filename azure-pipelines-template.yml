@@ -1,0 +1,120 @@
+parameters:
+- name: version
+  displayName: FireflyCI Version
+  type: string
+  default: latest
+- name: command
+  displayName: FireflyCI command to execute [post-apply, post-plan]
+  type: string
+  values:
+  - post-apply
+  - post-plan
+- name: context
+  displayName: The working directory of the IaC deployment
+  type: string
+  default: ' '
+- name: initLogFile
+  displayName: Path to the init log file
+  type: string
+  default: ' '
+- name: applyLogFile
+  displayName: Path to the apply log file
+  type: string
+  default: ' '
+- name: planJSONLogFile
+  displayName: Path to the plan JSON log file
+  type: string
+  default: ' '
+- name: planOutputFile
+  displayName: Path to the plan output file
+  type: string
+  default: ' '
+- name: planRawLogFile
+  displayName: Path to the plan raw log file
+  type: string
+  default: ' '
+- name: workspace
+  displayName: Workspace identifier
+  type: string
+  default: ' '
+- name: args
+  displayName: Additional arguments for the fireflyci executed command
+  type: string
+  default: ' '
+steps:
+- script: |
+    echo "##vso[task.setvariable variable=version;]"
+    echo "##vso[task.setvariable variable=command;]"
+    echo "##vso[task.setvariable variable=context;]"
+    echo "##vso[task.setvariable variable=initLogFile;]"
+    echo "##vso[task.setvariable variable=applyLogFile;]"
+    echo "##vso[task.setvariable variable=planJSONLogFile;]"
+    echo "##vso[task.setvariable variable=planOutputFile;]"
+    echo "##vso[task.setvariable variable=planRawLogFile;]"
+    echo "##vso[task.setvariable variable=workspace;]"
+    echo "##vso[task.setvariable variable=args;]"
+  displayName: Set CI Variables
+  condition: succeededOrFailed()
+- script: |
+    echo "##vso[task.setvariable variable=initLogFile;]${{ format('-i {0}', parameters.initLogFile)}}"
+  condition: ${{ ne(parameters.initLogFile, ' ') }}
+  displayName: Parse path to the init log file
+- script: |
+    echo "##vso[task.setvariable variable=applyLogFile;]${{ format('-f {0}', parameters.applyLogFile)}}"
+  condition: ${{ ne(parameters.applyLogFile, ' ') }}
+  displayName: Parse path to the apply log file
+- script: |
+    echo "##vso[task.setvariable variable=planJSONLogFile;]${{ format('-l {0}', parameters.planJSONLogFile)}}"
+  condition: ${{ ne(parameters.planJSONLogFile, ' ') }}
+  displayName: Parse path to the plan json log file
+- script: |
+    echo "##vso[task.setvariable variable=planOutputFile;]${{ format('-f {0}', parameters.planOutputFile)}}"
+  condition: ${{ ne(parameters.planOutputFile, ' ') }}
+  displayName: Parse path to the plan output file
+- script: |
+    echo "##vso[task.setvariable variable=planRawLogFile;]${{ format('--plan-output-raw-log-file {0}', parameters.planRawLogFile)}}"
+  condition: ${{ ne(parameters.planRawLogFile, ' ') }}
+  displayName: Parse path to the plan raw log file
+- script: |
+    echo "##vso[task.setvariable variable=workspace;]${{ format('-w {0}', parameters.workspace)}}"
+  condition: ${{ ne(parameters.workspace, ' ') }}
+  displayName: Parse workspace identifier
+- script: |
+    echo "##vso[task.setvariable variable=args;]${{ parameters.args }}"
+  condition: ${{ ne(parameters.args, ' ') }}
+  displayName: Parse additional arguments for the fireflyci executed command
+- script: docker run -e "FIREFLY_ACCESS_KEY" -e "FIREFLY_SECRET_KEY" -e "BUILD_REPOSITORY_NAME"
+    -e "SYSTEM_ISAZUREVM" -e "BUILD_REPOSITORY_URI" -e "BUILD_SOURCEBRANCHNAME" -e
+    "BUILD_SOURCEVERSIONAUTHOR" -e "BUILD_SOURCEVERSION" -e "SYSTEM_STAGENAME" -e
+    "BUILD_BUILDID" -e "BUILD_SOURCEVERSIONMESSAGE" -e "SYSTEM_TEAMFOUNDATIONSERVERURI"
+    -e "SYSTEM_TEAMPROJECT" -e "AGENT_VERSION" -e "BUILD_QUEUEDBY" -e "SYSTEM_PULLREQUEST_PULLREQUESTID"
+    -e "SYSTEM_PULLREQUEST_SOURCE_COMMITID" -e "SYSTEM_PULLREQUEST_SOURCE_REPOSITORY_URI"
+    -e "GIT_DISCOVERY_ACROSS_FILESYSTEM" --entrypoint "/bin/sh" -v $(Build.SourcesDirectory)/.git:/app/.git
+    -v $(Build.SourcesDirectory)/${{ parameters.context }}:/app/${{ parameters.context
+    }} public.ecr.aws/firefly/fireflyci:${{ parameters.version }} "-c"  "git config
+    --global --add safe.directory /app && cd ${{ parameters.context }}  && /app/fireflyci
+    ${{ parameters.command }} $(initLogFile) $(planOutputFile) $(planRawLogFile) $(planJSONLogFile)
+    $(workspace) $(applyLogFile) $(args)"
+  displayName: FireflyCI
+  condition: or(${{ eq(parameters.command, 'post-plan') }}, and(eq(variables['apply'],
+    true),ne(variables['planFailed'], 'true')))
+  env:
+    FIREFLY_ACCESS_KEY: $(fireflyAccessKey)
+    FIREFLY_SECRET_KEY: $(fireflySecretKey)
+    BUILD_REPOSITORY_NAME: $(Build.Repository.Name)
+    SYSTEM_ISAZUREVM: true
+    BUILD_REPOSITORY_URI: $(Build.Repository.Uri)
+    BUILD_SOURCEBRANCHNAME: $(Build.SourceBranchName)
+    BUILD_SOURCEVERSIONAUTHOR: $(Build.SourceVersionAuthor)
+    BUILD_SOURCEVERSION: $(Build.SourceVersion)
+    SYSTEM_STAGENAME: $(System.StageName)
+    BUILD_BUILDID: $(Build.BuildId)
+    BUILD_SOURCEVERSIONMESSAGE: $(Build.SourceVersionMessage)
+    SYSTEM_TEAMFOUNDATIONSERVERURI: $(System.TeamFoundationServerUri)
+    SYSTEM_TEAMPROJECT: $(System.TeamProject)
+    AGENT_VERSION: $(Agent.Version)
+    BUILD_QUEUEDBY: $(Build.QueuedBy)
+    SYSTEM_PULLREQUEST_PULLREQUESTID: $(System.PullRequest.PullRequestId)
+    SYSTEM_PULLREQUEST_SOURCE_COMMITID: $(System.PullRequest.SourceCommitId)
+    SYSTEM_PULLREQUEST_SOURCE_REPOSITORY_URI: $(System.PullRequest.SourceRepositoryURI)
+    GIT_DISCOVERY_ACROSS_FILESYSTEM: true
