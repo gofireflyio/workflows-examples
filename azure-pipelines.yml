@@ -72,7 +72,7 @@ stages:
         dockerVersion: 26.0.0
         releaseType: stable
       displayName: Install Docker
-    - template: templates/firefly.yaml
+    - template: azure-pipelines.fireflyci-template.yaml
       parameters:
         version: v0.5.21
         command: post-plan
@@ -91,7 +91,7 @@ stages:
       condition: and(eq(variables['apply'], true),ne(variables['planFailed'], 'true'))
       workingDirectory: $(System.DefaultWorkingDirectory)/aws-stag
       displayName: Terraform Apply
-    - template: templates/firefly.yaml
+    - template: azure-pipelines.fireflyci-template.yaml
       parameters:
         version: v0.5.21
         command: post-apply
