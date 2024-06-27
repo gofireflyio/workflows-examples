@@ -36,3 +36,8 @@ workflows:
 #     secretKeyRef:
 #       name: firefly-secrets
 #       key: FIREFLY_SECRET_KEY
+
+# kubectl create secret generic fireflySecret \
+#     --namespace=atlantis \
+#     --from-literal=FIREFLY_ACCESS_KEY=<FIREFLY_ACCESS_KEY_VALUE> \
+#     --from-literal=FIREFLY_SECRET_KEY=<FIREFLY_SECRET_KEY_VALUE>
