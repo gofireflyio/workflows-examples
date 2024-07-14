@@ -44,12 +44,12 @@ Or you can use the docker command of Jenkins that passes all environment variabl
 For post-plan run:
 ```
 docker.image('public.ecr.aws/firefly/fireflyci:latest').inside("-v ${WORKSPACE}:/app/jenkins --entrypoint=''") {
-    sh "/app/fireflyci post-plan -l /app/jenkins/environments/aws-stag/plan_log.json -f /app/jenkins/environments/aws-stag/plan_output.json --workspace ${TF_WORKSPACE}"
+    sh "/app/fireflyci post-plan -l /app/jenkins/environments/aws-stag/plan_log.jsonl -f /app/jenkins/environments/aws-stag/plan_output.json -i /app/jenkins/environments/aws-stag/init.log --plan-output-raw-log-file /app/jenkins/environments/aws-stag/plan_output_raw.log --workspace ${TF_WORKSPACE}"
 }
 ```
 For post-apply run:
 ```
 docker.image('public.ecr.aws/firefly/fireflyci:latest').inside("-v ${WORKSPACE}:/app/jenkins --entrypoint=''") {
-    sh "/app/fireflyci post-apply -f /app/jenkins/environments/aws-stag/apply_log.json --workspace ${TF_WORKSPACE}"
+    sh "/app/fireflyci post-apply -f /app/jenkins/environments/aws-stag/apply_log.jsonl --workspace ${TF_WORKSPACE}"
 }
 ```
