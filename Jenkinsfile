@@ -56,7 +56,7 @@ pipeline {
                         string(credentialsId: 'FIREFLY_SECRET_KEY', variable: 'FIREFLY_SECRET_KEY')
                     ]) {
                         script {
-                            docker.image('public.ecr.aws/firefly/fireflyci:v0.3.14').inside("-v ${WORKSPACE}:/app/jenkins --entrypoint=''") {
+                            docker.image('public.ecr.aws/firefly/fireflyci:latest').inside("-v ${WORKSPACE}:/app/jenkins --entrypoint=''") {
                                 sh "/app/fireflyci post-plan -l /app/jenkins/environments/aws-stag/plan_log.json -f /app/jenkins/environments/aws-stag/plan_output.json --workspace ${TF_WORKSPACE}"
                             }
                         }
@@ -81,7 +81,7 @@ pipeline {
                         string(credentialsId: 'FIREFLY_SECRET_KEY', variable: 'FIREFLY_SECRET_KEY')
                     ]) {
                         script {
-                            docker.image('public.ecr.aws/firefly/fireflyci:v0.3.14').inside("-v ${WORKSPACE}:/app/jenkins --entrypoint=''") {
+                            docker.image('public.ecr.aws/firefly/fireflyci:latest').inside("-v ${WORKSPACE}:/app/jenkins --entrypoint=''") {
                                 sh "/app/fireflyci post-apply -f /app/jenkins/environments/aws-stag/apply_log.json --workspace ${TF_WORKSPACE}"
                             }
                         }
