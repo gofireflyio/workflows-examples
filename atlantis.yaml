@@ -9,20 +9,16 @@ workflows:
   firefly:
     plan:
       steps:
+      - run: if [ ! -f "$HOME/fireflyci" ]; then curl -L -o fireflyci.tar.gz https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz && tar -xf fireflyci.tar.gz && chmod a+x fireflyci && mv fireflyci "$HOME/fireflyci" && rm fireflyci.tar.gz; fi
       - init
-      - run:
-          command: terraform validate
+      - run: terraform validate
       - plan
       - show
       - run: terraform$ATLANTIS_TERRAFORM_VERSION show $PLANFILE > plan_raw_log.log
-      - run: |
-            curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz &&
-            tar -xf fireflyci_Linux_x86_64.tar.gz &&
-            chmod a+x fireflyci &&
-            ./fireflyci post-plan -f $SHOWFILE --plan-output-raw-log-file plan_raw_log.log --workspace $REPO_REL_DIR
+      - run: $HOME/fireflyci post-plan -f $SHOWFILE --plan-output-raw-log-file plan_raw_log.log --workspace $REPO_REL_DIR
     apply:
       steps:
-      - run: ./fireflyci post-plan -f $SHOWFILE --plan-output-raw-log-file plan_raw_log.log --workspace $REPO_REL_DIR
+      - run: $HOME/fireflyci post-plan -f $SHOWFILE --plan-output-raw-log-file plan_raw_log.log --workspace $REPO_REL_DIR
       - apply
 
 
