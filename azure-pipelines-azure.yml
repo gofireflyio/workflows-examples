@@ -1,0 +1,101 @@
+trigger:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - azure-stag/**
+pr:
+  branches:
+    include:
+    - main
+  paths:
+    include:
+    - azure-stag/**
+pool:
+  vmImage: ubuntu-latest
+parameters:
+- name: applyChanges
+  displayName: Should apply Terraform changes?
+  type: boolean
+  default: "false"
+variables:
+- group: fireflySecrets
+- group: Terraform_SPN
+- name: fireflyAccessKey
+  value: $[variables.FIREFLY_ACCESS_KEY]
+- name: fireflySecretKey
+  value: $[variables.FIREFLY_SECRET_KEY]
+- name: apply
+  ${{ if eq( variables['Build.Reason'], 'Manual' ) }}:
+    value: ${{ parameters.applyChanges }}
+  ${{ elseif and( eq( variables['Build.Reason'], 'IndividualCI' ), eq( variables['Build.SourceBranch'], 'refs/heads/main' ) ) }}:
+    value: true
+  ${{ else }}:
+    value: false
+stages:
+- stage: DeployTerraformWorkspace
+  displayName: Deploy Terraform Workspace
+  jobs:
+  - job: DeployTerraformWorkspace
+    displayName: Deploy Terraform Workspace
+    steps:
+    - checkout: self
+      fetchDepth: 0
+      persistCredentials: true
+      displayName: Checkout Repository
+    - task: TerraformInstaller@0
+      inputs:
+        terraformVersion: 1.8.1
+      displayName: Install Terraform
+    - script: terraform init >& init.log
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      displayName: Terraform Init
+      workingDirectory: $(System.DefaultWorkingDirectory)/azure-stag
+    - script: terraform plan -json -out=tf.plan > plan_log.jsonl && terraform show
+        -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      displayName: Terraform Plan
+      workingDirectory: $(System.DefaultWorkingDirectory)/azure-stag
+    - script: echo "##vso[task.setvariable variable=planFailed]true"
+      displayName: Terraform Plan Status Check
+      condition: failed()
+    - task: DockerInstaller@0
+      inputs:
+        dockerVersion: 26.0.0
+        releaseType: stable
+      displayName: Install Docker
+    - template: azure-pipelines.fireflyci-template.yaml
+      parameters:
+        version: v0.5.51
+        command: post-plan
+        context: azure-stag
+        initLogFile: init.log
+        planJSONLogFile: plan_log.jsonl
+        planOutputFile: plan_output.json
+        planRawLogFile: plan_output_raw.log
+        workspace: azure-terraform
+    - script: terraform apply -auto-approve -json > apply_log.jsonl
+      env:
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
+      condition: and(eq(variables['apply'], true),ne(variables['planFailed'], 'true'))
+      workingDirectory: $(System.DefaultWorkingDirectory)/azure-stag
+      displayName: Terraform Apply
+    - template: azure-pipelines.fireflyci-template.yaml
+      parameters:
+        version: v0.5.51
+        command: post-apply
+        context: azure-stag
+        applyLogFile: apply_log.jsonl
+        workspace: azure-terraform
