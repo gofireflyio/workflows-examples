@@ -4,14 +4,14 @@ trigger:
     - main
   paths:
     include:
-    - aws-stag/**
+    - azure-stag/**
 pr:
   branches:
     include:
     - main
   paths:
     include:
-    - aws-stag/**
+    - azure-stag/**
 pool:
   vmImage: ubuntu-latest
 parameters:
@@ -21,6 +21,7 @@ parameters:
   default: "false"
 variables:
 - group: fireflySecrets
+- group: Terraform_SPN
 - name: fireflyAccessKey
   value: $[variables.FIREFLY_ACCESS_KEY]
 - name: fireflySecretKey
@@ -49,21 +50,21 @@ stages:
       displayName: Install Terraform
     - script: terraform init >& init.log
       env:
-        AWS_ACCESS_KEY_ID: $(AWS.AccessKeyID)
-        AWS_SECRET_ACCESS_KEY: $(AWS.SecretAccessKey)
-        FIREFLY_ACCESS_KEY: $(FIREFLY_ACCESS_KEY)
-        FIREFLY_SECRET_KEY: $(FIREFLY_SECRET_KEY)
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
       displayName: Terraform Init
-      workingDirectory: $(System.DefaultWorkingDirectory)/aws-stag
+      workingDirectory: $(System.DefaultWorkingDirectory)/azure-stag
     - script: terraform plan -json -out=tf.plan > plan_log.jsonl && terraform show
         -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log
       env:
-        AWS_ACCESS_KEY_ID: $(AWS.AccessKeyID)
-        AWS_SECRET_ACCESS_KEY: $(AWS.SecretAccessKey)
-        FIREFLY_ACCESS_KEY: $(FIREFLY_ACCESS_KEY)
-        FIREFLY_SECRET_KEY: $(FIREFLY_SECRET_KEY)
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
       displayName: Terraform Plan
-      workingDirectory: $(System.DefaultWorkingDirectory)/aws-stag
+      workingDirectory: $(System.DefaultWorkingDirectory)/azure-stag
     - script: echo "##vso[task.setvariable variable=planFailed]true"
       displayName: Terraform Plan Status Check
       condition: failed()
@@ -74,9 +75,9 @@ stages:
       displayName: Install Docker
     - template: azure-pipelines.fireflyci-template.yaml
       parameters:
-        version: v0.5.21
+        version: v0.5.51
         command: post-plan
-        context: aws-stag
+        context: azure-stag
         initLogFile: init.log
         planJSONLogFile: plan_log.jsonl
         planOutputFile: plan_output.json
@@ -84,17 +85,17 @@ stages:
         workspace: azure-terraform
     - script: terraform apply -auto-approve -json > apply_log.jsonl
       env:
-        AWS_ACCESS_KEY_ID: $(AWS.AccessKeyID)
-        AWS_SECRET_ACCESS_KEY: $(AWS.SecretAccessKey)
-        FIREFLY_ACCESS_KEY: $(FIREFLY_ACCESS_KEY)
-        FIREFLY_SECRET_KEY: $(FIREFLY_SECRET_KEY)
+        ARM_CLIENT_ID: $(ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(ARM_CLIENT_SECRET)
+        ARM_SUBSCRIPTION_ID: $(ARM_SUBSCRIPTION_ID)
+        ARM_TENANT_ID: $(ARM_TENANT_ID)
       condition: and(eq(variables['apply'], true),ne(variables['planFailed'], 'true'))
-      workingDirectory: $(System.DefaultWorkingDirectory)/aws-stag
+      workingDirectory: $(System.DefaultWorkingDirectory)/azure-stag
       displayName: Terraform Apply
     - template: azure-pipelines.fireflyci-template.yaml
       parameters:
-        version: v0.5.21
+        version: v0.5.51
         command: post-apply
-        context: aws-stag
+        context: azure-stag
         applyLogFile: apply_log.jsonl
         workspace: azure-terraform
