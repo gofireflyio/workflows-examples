@@ -140,6 +140,11 @@ Here are all the environment variables for each CI tool. Add this to the docker 
 -e JENKINS_HOME -e GIT_URL -e GIT_BRANCH -e GIT_COMMITTER_NAME -e GIT_COMMITTER_EMAIL -e GIT_AUTHOR_NAME -e GIT_AUTHOR_EMAIL -e BUILD_USER -e GIT_COMMIT -e JOB_NAME -e BUILD_NUMBER -e JENKINS_VERSION -e BUILD_URL
 ```
 
+### Env0
+```
+-e ENV0_ENVIRONMENT_ID -e ENV0_PROJECT_ID -e ENV0_TEMPLATE_REPOSITORY -e ENV0_TEMPLATE_REVISION -e ENV0_DEPLOYER_NAME -e ENV0_DEPLOYER_EMAIL -e ENV0_VCS_PROVIDER -e ENV0_PR_AUTHOR -e ENV0_PR_NUMBER -e ENV0_COMMIT_HASH -e ENV0_DEPLOYMENT_LOG_ID
+```
+
 Or you can use the docker command of Jenkins that passes all environment variables to the image.
 
 For post-plan run:
