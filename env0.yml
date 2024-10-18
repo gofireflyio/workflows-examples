@@ -1,0 +1,21 @@
+version: 2
+
+deploy:
+  steps:
+    setupVariables:
+      after:
+        - name: Get FireflyCI Image
+          run: |
+            - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz
+            - tar -xf fireflyci_Linux_x86_64.tar.gz
+            - chmod a+x fireflyci
+            - echo FIREFLY_WORKSPACE=<your-workspace-name> >> $ENV0_ENV
+    terraformPlan:
+      after:
+        - name: Firefly Post-Plan
+          run: |
+            - terraform show -json .tf-plan > plan_output.json
+            - ./fireflyci post-plan -f plan_output.json --workspace $FIREFLY_WORKSPACE
+
+
+# Please add the "FIREFLY_ACCESS_KEY" and "FIREFLY_SECRET_KEY" environment variables to your env0 environment
