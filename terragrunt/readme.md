@@ -30,6 +30,7 @@
    ```
 
 6. **Set Up CI/CD Pipeline**
+
    Example pipeline structure:
    ```yaml
    steps:
