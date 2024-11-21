@@ -22,13 +22,14 @@
    ```
 
 4. **Create and Run Post-Plan Processing Script**
-   Copy the post-plan.sh script into your repository and update your pipeline to run the following after the terragrunt plan:
+   - Copy the post-plan.sh script into your repository.
+   - Update your pipeline to run the following after the terragrunt plan:
    ```bash
    chmod +x post-plan.sh
    ./post-plan.sh myproject
    ```
 
-5. **Set Up CI/CD Pipeline**
+6. **Set Up CI/CD Pipeline**
    Example pipeline structure:
    ```yaml
    steps:
