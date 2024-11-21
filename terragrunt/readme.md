@@ -28,7 +28,7 @@
    ./post-plan.sh myproject
    ```
 
-6. **Set Up CI/CD Pipeline**
+5. **Set Up CI/CD Pipeline**
    Example pipeline structure:
    ```yaml
    steps:
