@@ -1,12 +1,17 @@
 include:
   - local: .workspace-deployment.yml
-  
+
+stages:
+  - deploy-stage
+
 workspace-1:
+  stage: deploy-stage
   extends: .workspace-template
   variables:
     WORKING_DIR: "aws-stag/workspace-1"
 
-workspace-1:
+workspace-2:
+  stage: deploy-stage
   extends: .workspace-template
   variables:
     WORKING_DIR: "aws-stag/workspace-2"
