@@ -27,8 +27,8 @@ before_script:
 plan:
   stage: plan
   script:
-    - terraform plan -json -out=tf.plan > plan_log.jsonl && terraform show -json tf.plan > plan_output.json || true
-    - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --workspace $WORKING_DIR
+    - terraform plan -json -out=tf.plan > plan_log.jsonl && terraform show -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log || true
+    - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --plan-output-raw-log-file plan_output_raw.log --workspace $WORKING_DIR
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
     - if: '$CI_COMMIT_BRANCH == "main"'
