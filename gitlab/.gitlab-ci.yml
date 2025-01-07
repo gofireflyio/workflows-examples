@@ -1,0 +1,9 @@
+workspace-1:
+  extends: .workspace-template
+  variables:
+    WORKING_DIR: "aws-stag/workspace-1"
+
+workspace-1:
+  extends: .workspace-template
+  variables:
+    WORKING_DIR: "aws-stag/workspace-2"
