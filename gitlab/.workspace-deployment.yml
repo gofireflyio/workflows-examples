@@ -20,18 +20,18 @@ default:
   - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --plan-output-raw-log-file plan_output_raw.log --workspace $WORKING_DIR
 
 .apply_step: &apply_step
-  - terraform apply -auto-approve -json > apply_log.jsonl || true
-  - ./fireflyci post-apply -f apply_log.jsonl --workspace $WORKING_DIR
+  - | 
+    if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+      terraform apply -auto-approve -json > apply_log.jsonl || true
+      ./fireflyci post-apply -f apply_log.jsonl --workspace $WORKING_DIR
+    fi
 
 # Workspace template
 .workspace-template:
   script:
     - *init_step
     - *plan_step
-    - |
-      if [ "$CI_COMMIT_BRANCH" = "main" ]; then
-        *apply_step
-      fi
+    - *apply_step
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
       changes:
