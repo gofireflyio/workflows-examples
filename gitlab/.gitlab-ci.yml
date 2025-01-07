@@ -1,3 +1,6 @@
+include:
+  - local: .workspace-deployment.yml
+  
 workspace-1:
   extends: .workspace-template
   variables:
