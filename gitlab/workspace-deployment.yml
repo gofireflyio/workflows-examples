@@ -1,0 +1,47 @@
+variables:
+  FIREFLY_ACCESS_KEY: $FIREFLY_ACCESS_KEY
+  FIREFLY_SECRET_KEY: $FIREFLY_SECRET_KEY
+  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+
+default:
+  image:
+    name: hashicorp/terraform:1.8.3
+    entrypoint:
+      - '/usr/bin/env'
+      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+# Common step templates
+.init_step: &init_step
+  - apk add curl
+  - cd ${WORKING_DIR}
+  - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz
+  - tar -xf fireflyci_Linux_x86_64.tar.gz
+  - chmod a+x fireflyci
+  - terraform --version
+  - terraform init > init.log
+
+.plan_step: &plan_step
+  - terraform plan -json -out=tf.plan > plan_log.jsonl && terraform show -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log || true
+  - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --plan-output-raw-log-file plan_output_raw.log --workspace $WORKING_DIR
+
+.apply_step: &apply_step
+  - terraform apply -auto-approve -json > apply_log.jsonl || true
+  - ./fireflyci post-apply -f apply_log.jsonl --workspace $WORKING_DIR
+
+# Workspace template
+.workspace-template:
+  script:
+    - *init_step
+    - *plan_step
+    - |
+      if [ "$CI_COMMIT_BRANCH" = "main" ]; then
+        *apply_step
+      fi
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+      changes:
+        - ${WORKING_DIR}/**/*
+    - if: '$CI_COMMIT_BRANCH == "main"'
+      changes:
+        - ${WORKING_DIR}/**/*
