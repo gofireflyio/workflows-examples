@@ -1,23 +1,24 @@
-variables:
-  FIREFLY_ACCESS_KEY: $FIREFLY_ACCESS_KEY
-  FIREFLY_SECRET_KEY: $FIREFLY_SECRET_KEY
-  AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-  AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
-
-include:
-  - local: .workspace-deployment.yml
+.default_rules:
+  rules:
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH || $CI_PIPELINE_SOURCE == "merge_request_event"
+      changes:
+        paths:
+          - $TARGET_DIR/**/*
+          - modules/**/*
 
 stages:
   - deploy-stage
 
-workspace-1:
+aws-stag:
   stage: deploy-stage
-  extends: .workspace-template
   variables:
-    WORKING_DIR: "aws-stag/workspace-1"
-
-workspace-2:
-  stage: deploy-stage
-  extends: .workspace-template
-  variables:
-    WORKING_DIR: "aws-stag/workspace-2"
+    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
+    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+    TARGET_DIR: "aws-stag"
+    EXTRA_ARGS: "-var-file=../terraform.tfvars"
+  trigger:
+    include:
+      - local: ".workspace-deployment.yml"
+    strategy: depend
+  rules:
+    - !reference [.default_rules, rules]
