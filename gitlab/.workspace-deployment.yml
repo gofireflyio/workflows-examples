@@ -1,41 +1,39 @@
-default:
-  image:
-    name: hashicorp/terraform:1.8.3
-    entrypoint:
-      - '/usr/bin/env'
-      - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+stages:
+  - plan
+  - apply
 
-# Common step templates
-.init_step: &init_step
+variables:
+  FIREFLY_ACCESS_KEY: $FIREFLY_ACCESS_KEY
+  FIREFLY_SECRET_KEY: $FIREFLY_SECRET_KEY
+
+image:  
+  name: hashicorp/terraform:1.8.3
+  entrypoint:
+  - '/usr/bin/env'
+  - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
+
+before_script:
   - apk add curl
-  - cd ${WORKING_DIR}
+  - cd $TARGET_DIR
   - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz
   - tar -xf fireflyci_Linux_x86_64.tar.gz
   - chmod a+x fireflyci
   - terraform --version
-  - terraform init > init.log || ./fireflyci post-plan -i init.log --workspace $WORKING_DIR
+  - terraform init > init.log || ./fireflyci post-plan -i init.log --workspace $TARGET_DIR
 
-.plan_step: &plan_step
-  - terraform plan -json -out=tf.plan > plan_log.jsonl && terraform show -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log || true
-  - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --plan-output-raw-log-file plan_output_raw.log --workspace $WORKING_DIR
-
-.apply_step: &apply_step
-  - | 
-    if [ "$CI_COMMIT_BRANCH" = "main" ]; then
-      terraform apply -auto-approve -json > apply_log.jsonl || true
-      ./fireflyci post-apply -f apply_log.jsonl --workspace $WORKING_DIR
-    fi
-
-# Workspace template
-.workspace-template:
+plan:
+  stage: plan
   script:
-    - *init_step
-    - *plan_step
-    - *apply_step
+    - terraform plan -json -out=tf.plan ${EXTRA_ARGS} > plan_log.jsonl && terraform show -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log || true
+    - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --plan-output-raw-log-file plan_output_raw.log --workspace ${TARGET_DIR}
   rules:
     - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
-      changes:
-        - ${WORKING_DIR}/**/*
-    - if: '$CI_COMMIT_BRANCH == "main"'
-      changes:
-        - ${WORKING_DIR}/**/*
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+apply:
+  stage: apply
+  script:
+    - terraform apply -auto-approve -json ${EXTRA_ARGS} > apply_log.jsonl || true
+    - ./fireflyci post-apply -f apply_log.jsonl --workspace $TARGET_DIR
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
