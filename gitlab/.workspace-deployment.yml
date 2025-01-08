@@ -19,7 +19,7 @@ before_script:
   - tar -xf fireflyci_Linux_x86_64.tar.gz
   - chmod a+x fireflyci
   - terraform --version
-  - terraform init > init.log || ./fireflyci post-plan -i init.log --workspace $TARGET_DIR
+  - terraform init > init.log || ./fireflyci post-plan -f plan_output.json -i init.log --workspace $TARGET_DIR
 
 plan:
   stage: plan
