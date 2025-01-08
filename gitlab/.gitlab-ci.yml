@@ -12,10 +12,24 @@ stages:
 aws-stag:
   stage: deploy-stage
   variables:
-    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID
-    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY
+    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID_STAGE
+    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY_STAGE
     TARGET_DIR: "aws-stag"
     EXTRA_ARGS: "-var-file=../terraform.tfvars"
+  trigger:
+    include:
+      - local: ".workspace-deployment.yml"
+    strategy: depend
+  rules:
+    - !reference [.default_rules, rules]
+
+aws-prod:
+  stage: deploy-stage
+  variables:
+    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID_PROD
+    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY_PROD
+    TF_VAR_bucket_name: "production-bucket-firefly-gitlab-pipeline"
+    TARGET_DIR: "aws-prod"
   trigger:
     include:
       - local: ".workspace-deployment.yml"
