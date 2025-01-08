@@ -9,13 +9,29 @@
 stages:
   - deploy-stage
 
-aws-stag:
+aws-stag-us:
   stage: deploy-stage
   variables:
     AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID_STAGE
     AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY_STAGE
     TARGET_DIR: "aws-stag"
-    EXTRA_ARGS: "-var-file=../terraform.tfvars"
+    EXTRA_ARGS: "-var-file=../terraform-us.tfvars"
+    WORKSPACE_NAME: "aws-stag-us"
+  trigger:
+    include:
+      - local: ".workspace-deployment.yml"
+    strategy: depend
+  rules:
+    - !reference [.default_rules, rules]
+
+aws-stag-eu:
+  stage: deploy-stage
+  variables:
+    AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID_STAGE
+    AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY_STAGE
+    TARGET_DIR: "aws-stag"
+    EXTRA_ARGS: "-var-file=../terraform-eu.tfvars"
+    WORKSPACE_NAME: "aws-stag-eu"
   trigger:
     include:
       - local: ".workspace-deployment.yml"
