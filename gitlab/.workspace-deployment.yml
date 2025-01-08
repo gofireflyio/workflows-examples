@@ -25,7 +25,7 @@ plan:
   stage: plan
   script:
     - terraform plan -json -out=tf.plan ${EXTRA_ARGS} > plan_log.jsonl && terraform show -json tf.plan > plan_output.json && terraform show tf.plan > plan_output_raw.log || true
-    - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --plan-output-raw-log-file plan_output_raw.log --workspace ${WORKSPACE_NAME:-$TARGET_DIR}
+    - ./fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init.log --plan-output-raw-log-file plan_output_raw.log --workspace ${WORKSPACE_NAME:-$TARGET_DIR} --work-dir $TARGET_DIR
   rules:
     - when: always
 
