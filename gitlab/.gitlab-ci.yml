@@ -8,6 +8,7 @@
 
 stages:
   - deploy-stage
+  - deploy-prod
 
 aws-stag-us:
   stage: deploy-stage
@@ -40,7 +41,7 @@ aws-stag-eu:
     - !reference [.default_rules, rules]
 
 aws-prod:
-  stage: deploy-stage
+  stage: deploy-prod
   variables:
     AWS_ACCESS_KEY_ID: $AWS_ACCESS_KEY_ID_PROD
     AWS_SECRET_ACCESS_KEY: $AWS_SECRET_ACCESS_KEY_PROD
