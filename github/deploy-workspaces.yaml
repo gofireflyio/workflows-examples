@@ -1,0 +1,107 @@
+name: Deploy Workspaces
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'aws-stage/**'
+      - 'aws-prod/**'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'aws-stage/**'
+      - 'aws-prod/**'
+  workflow_dispatch:
+    inputs:
+      apply:
+        description: Should apply Terraform changes?
+        type: boolean
+        default: false
+      workspace:
+        description: 'Select workspace to deploy'
+        required: true
+        type: choice
+        options:
+          - all
+          - aws-stage
+          - aws-prod
+
+jobs:
+  prepare-matrix:
+    runs-on: ubuntu-latest
+    outputs:
+      matrix: ${{ steps.set-matrix.outputs.matrix }}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+        
+      - name: Set up workspace matrix
+        id: set-matrix
+        run: |
+          # Define all available workspaces
+          WORKSPACES='[
+              {
+                "path": "aws-stage",
+                "tf_version": "1.8.1"
+              },
+              {
+                "path": "aws-prod",
+                "tf_version": "1.8.1"
+              }
+          ]'
+          
+          # For workflow dispatch, filter based on selected workspace
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            if [ "${{ github.event.inputs.workspace }}" = "all" ]; then
+              # Use all workspaces but wrap in include
+              MATRIX=$(echo "$WORKSPACES" | jq -c '{"include": .}')
+              echo "matrix=$MATRIX" >> $GITHUB_OUTPUT
+            else
+              # Filter for selected workspace and wrap in include
+              FILTERED=$(echo "$WORKSPACES" | jq -c --arg path "${{ github.event.inputs.workspace }}" '[.[] | select(.path == $path)]')
+              echo "matrix={\"include\":$FILTERED}" >> $GITHUB_OUTPUT
+            fi
+          
+          # For push/pull_request events, filter based on changed files
+          elif [ "${{ github.event_name }}" = "push" ] || [ "${{ github.event_name }}" = "pull_request" ]; then
+            # Get changed files
+            if [ "${{ github.event_name }}" = "pull_request" ]; then
+              CHANGED_FILES=$(gh pr view ${{ github.event.pull_request.number }} --json files --jq '.files[].path')
+            else
+              CHANGED_FILES=$(git diff --name-only ${{ github.event.before }} ${{ github.event.after }})
+            fi
+            
+            # Filter workspaces based on changed files and wrap in include
+            FILTERED=$(echo "$WORKSPACES" | jq -c --arg changes "$CHANGED_FILES" '[.[] | select(.path as $p | ($changes | split("\n") | map(startswith($p)) | any))]')
+            echo "matrix={\"include\":$FILTERED}" >> $GITHUB_OUTPUT
+          
+          # Default to all workspaces
+          else
+            echo "matrix={\"include\":$(echo "$WORKSPACES")}" >> $GITHUB_OUTPUT
+          fi
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  deploy-workspaces:
+    needs: prepare-matrix
+    strategy:
+      matrix: ${{ fromJson(needs.prepare-matrix.outputs.matrix) }}
+      # Allow other workspaces to continue if one fails
+      fail-fast: false
+    
+    uses: ./.github/workflows/reusable.yml
+    with:
+      workspace_path: ${{ matrix.path }}
+      terraform_version: ${{ matrix.tf_version }}
+      should_apply: >-
+        ${{
+          github.event_name == 'workflow_dispatch' && inputs.apply ||
+          github.event_name == 'push' && github.ref == 'refs/heads/main'
+        }}
+    secrets:
+      FIREFLY_ACCESS_KEY: ${{ secrets.FIREFLY_ACCESS_KEY }}
+      FIREFLY_SECRET_KEY: ${{ secrets.FIREFLY_SECRET_KEY }}
