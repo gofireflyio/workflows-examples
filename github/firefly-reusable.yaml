@@ -1,0 +1,90 @@
+name: Reusable Firefly Workflow
+
+on:
+  workflow_call:
+    inputs:
+      workspace_path:
+        required: true
+        type: string
+        description: 'Path to the Terraform workspace'
+      terraform_version:
+        required: false
+        type: string
+        default: '1.8.1'
+        description: 'Terraform version to use'
+      should_apply:
+        required: false
+        type: boolean
+        default: false
+        description: 'Whether to apply the Terraform changes'
+    secrets:
+      FIREFLY_ACCESS_KEY:
+        required: true
+      FIREFLY_SECRET_KEY:
+        required: true
+
+jobs:
+  deploy:
+    name: Deploy Terraform Workspace
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: ${{ inputs.workspace_path }}
+    env:
+      FIREFLY_ACCESS_KEY: ${{ secrets.FIREFLY_ACCESS_KEY }}
+      FIREFLY_SECRET_KEY: ${{ secrets.FIREFLY_SECRET_KEY }}
+
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        id: init
+        run: terraform init >& init.log
+        continue-on-error: true
+
+      - name: Terraform Plan
+        id: plan
+        if: steps.init.outcome == 'success'
+        run: |
+          terraform plan -json -out=tf.plan > plan_log.jsonl && \
+          terraform show -json tf.plan > plan_output.json && \
+          terraform show tf.plan > plan_output_raw.log
+        continue-on-error: true
+
+      - name: Firefly Post Plan
+        uses: gofireflyio/fireflyci@v0.5.101
+        with:
+          command: post-plan
+          context: ${{ inputs.workspace_path }}
+          init-log-file: init.log
+          plan-json-log-file: plan_log.jsonl
+          plan-output-file: plan_output.json
+          plan-raw-log-file: plan_output_raw.log
+          workspace: ${{ inputs.workspace_path }}
+
+      - name: Terraform Apply
+        if: inputs.should_apply == true && steps.plan.outcome == 'success'
+        run: terraform apply -auto-approve -json > apply_log.jsonl
+        continue-on-error: true
+
+      - name: Firefly Post Apply
+        if: inputs.should_apply == true && steps.plan.outcome == 'success'
+        uses: gofireflyio/fireflyci@v0.5.101
+        with:
+          command: post-apply
+          context: ${{ inputs.workspace_path }}
+          apply-log-file: apply_log.jsonl
+          workspace: ${{ inputs.workspace_path }}
+        continue-on-error: true
