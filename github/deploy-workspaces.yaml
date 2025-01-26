@@ -93,7 +93,7 @@ jobs:
       # Allow other workspaces to continue if one fails
       fail-fast: false
     
-    uses: ./.github/workflows/reusable.yml
+    uses: ./.github/workflows/firefly-reusable.yml
     with:
       workspace_path: ${{ matrix.path }}
       terraform_version: ${{ matrix.tf_version }}
