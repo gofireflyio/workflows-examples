@@ -15,6 +15,28 @@ image:
 before_script:
   - apk add curl
   - cd $TARGET_DIR
+  # If AWS_PROFILES is defined, create AWS profile/s
+  - |
+    if [ ! -z "$AWS_PROFILES" ]; then
+      mkdir -p ${CI_PROJECT_DIR}/.aws
+      # Iterate through each profile in the JSON
+      echo "$AWS_PROFILES" | jq -r 'to_entries[] | "\(.key) \(.value.key) \(.value.secret) \(.value.region)"' | while read -r profile key_var secret_var region; do
+        if [ ! -z "$key_var" ] && [ ! -z "$secret_var" ]; then
+          # Use profile-specific region or fall back to default
+          profile_region=${region:-${AWS_DEFAULT_REGION:-us-east-1}}
+          # Add to credentials file
+          echo "" >> ${CI_PROJECT_DIR}/.aws/credentials
+          echo "[$profile]" >> ${CI_PROJECT_DIR}/.aws/credentials
+          echo "aws_access_key_id = $key_var" >> ${CI_PROJECT_DIR}/.aws/credentials
+          echo "aws_secret_access_key = $secret_var" >> ${CI_PROJECT_DIR}/.aws/credentials
+          
+          # Add to config file
+          echo "" >> ${CI_PROJECT_DIR}/.aws/config
+          echo "[$profile]" >> ${CI_PROJECT_DIR}/.aws/config
+          echo "region = $profile_region" >> ${CI_PROJECT_DIR}/.aws/config
+        fi
+      done
+    fi
   - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz
   - tar -xf fireflyci_Linux_x86_64.tar.gz
   - chmod a+x fireflyci
