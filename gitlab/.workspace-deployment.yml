@@ -15,25 +15,29 @@ image:
 before_script:
   - apk add curl jq
   - cd $TARGET_DIR
-  # If AWS_PROFILES is defined, create AWS profile/s
   - |
+    # If AWS_PROFILES is defined, create AWS profile/s
     if [ ! -z "$AWS_PROFILES" ]; then
-      mkdir -p ${CI_PROJECT_DIR}/.aws
+      mkdir -p ~/.aws
+      touch ~/.aws/credentials ~/.aws/config
+      chmod 600 ~/.aws/credentials ~/.aws/config
+      export AWS_SDK_LOAD_CONFIG=1
       # Iterate through each profile in the JSON
       echo "$AWS_PROFILES" | jq -r 'to_entries[] | "\(.key) \(.value.key) \(.value.secret) \(.value.region)"' | while read -r profile key_var secret_var region; do
         if [ ! -z "$key_var" ] && [ ! -z "$secret_var" ]; then
           # Use profile-specific region or fall back to default
           profile_region=${region:-${AWS_DEFAULT_REGION:-us-east-1}}
+          
           # Add to credentials file
-          echo "" >> ${CI_PROJECT_DIR}/.aws/credentials
-          echo "[$profile]" >> ${CI_PROJECT_DIR}/.aws/credentials
-          echo "aws_access_key_id = $key_var" >> ${CI_PROJECT_DIR}/.aws/credentials
-          echo "aws_secret_access_key = $secret_var" >> ${CI_PROJECT_DIR}/.aws/credentials
+          echo "" >> ~/.aws/credentials
+          echo "[${profile}]" >> ~/.aws/credentials
+          echo "aws_access_key_id = ${key_var}" >> ~/.aws/credentials
+          echo "aws_secret_access_key = ${secret_var}" >> ~/.aws/credentials
           
           # Add to config file
-          echo "" >> ${CI_PROJECT_DIR}/.aws/config
-          echo "[$profile]" >> ${CI_PROJECT_DIR}/.aws/config
-          echo "region = $profile_region" >> ${CI_PROJECT_DIR}/.aws/config
+          echo "" >> ~/.aws/config
+          echo "[profile ${profile}]" >> ~/.aws/config
+          echo "region = ${profile_region}" >> ~/.aws/config
         fi
       done
     fi
