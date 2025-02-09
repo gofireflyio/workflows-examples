@@ -13,7 +13,7 @@ image:
   - 'PATH=/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/sbin:/bin'
 
 before_script:
-  - apk add curl
+  - apk add curl jq
   - cd $TARGET_DIR
   # If AWS_PROFILES is defined, create AWS profile/s
   - |
