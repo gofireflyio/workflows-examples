@@ -31,6 +31,8 @@ aws-stag-eu:
     TARGET_DIR: "aws-stag"
     EXTRA_ARGS: "-var-file=../terraform-eu.tfvars"
     WORKSPACE_NAME: "aws-stag-eu"
+    # Optional set Terraform workspace
+    TERRAFORM_WORKSPACE_NAME: "staging"
     # Optional profiles with their credentials
     AWS_PROFILES: |
       {
