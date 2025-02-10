@@ -46,6 +46,11 @@ before_script:
   - chmod a+x fireflyci
   - terraform --version
   - terraform init >& init.log || ./fireflyci post-plan -f plan_output.json -i init.log --workspace ${WORKSPACE_NAME:-$TARGET_DIR}
+  - | 
+    # If TERRAFORM_WORKSPACE_NAME is defined, create and select the Terraform workspace
+    if [ ! -z "$TERRAFORM_WORKSPACE_NAME" ]; then
+      terraform workspace new $TERRAFORM_WORKSPACE_NAME || terraform workspace select $TERRAFORM_WORKSPACE_NAME
+    fi
 
 plan:
   stage: plan
