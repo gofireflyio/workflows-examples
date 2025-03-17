@@ -67,7 +67,6 @@ jobs:
                 plan-output-file: plan_output.json
                 plan-raw-log-file: plan_output_raw.log
                 workspace: aws-stag
-              continue-on-error: true
             - name: Terraform Apply
               if: steps.set-params.outputs.apply == 'true' && steps.terraform-plan.outcome == 'success'
               run: terraform apply -auto-approve -json > apply_log.jsonl
