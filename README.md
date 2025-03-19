@@ -117,7 +117,7 @@ Here are all the environment variables for each CI tool. Add this to the docker 
 
 ### Atlantis
 ```
--e HEAD_BRANCH_NAME -e BASE_REPO_NAME -e BASE_REPO_OWNER -e USER_NAME -e HEAD_COMMIT -e REPO_REL_DIR -e PROJECT_NAME -e PULL_NUM -e PULL_URL
+-e HEAD_BRANCH_NAME -e BASE_REPO_NAME -e BASE_REPO_OWNER -e USER_NAME -e HEAD_COMMIT -e REPO_REL_DIR -e PROJECT_NAME -e PULL_NUM -e PULL_URL -e ATLANTIS_TERRAFORM_VERSION
 ```
 
 ### Semaphore
