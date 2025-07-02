@@ -16,9 +16,7 @@
 3. **Modify Terragrunt Plan Command**
    ```bash
    # Instead of regular terragrunt run-all plan
-   terragrunt run-all plan \
-     --terragrunt-out-dir /tmp/all \
-     --terragrunt-json-out /tmp/all
+   terragrunt plan -all --out-dir /tmp/all --json-out-dir /tmp/all
    ```
 
 4. **Create and Run Post-Plan Processing Script**
@@ -36,10 +34,7 @@
    steps:
      - name: Terragrunt Plan
        run: |
-         terragrunt run-all plan \
-           --terragrunt-out-dir /tmp/all \
-           --terragrunt-json-out /tmp/all \
-           --terragrunt-non-interactive
+         terragrunt plan -all --out-dir /tmp/all --json-out-dir /tmp/all --non-interactive
 
      - name: Firefly Post-Plan
        run: |
