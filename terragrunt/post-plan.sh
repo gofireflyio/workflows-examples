@@ -29,9 +29,8 @@ find "$OUTPUTS_DIR" -type f -name "tfplan.tfplan" | while read -r plan_file; do
     echo "Processing $relative_path..."
     
     # Create output files in the same directory
-    plan_output_json="$project_dir/plan_output.json"
+    plan_output_json="$project_dir/tfplan.json"
     plan_output_raw="$project_dir/plan_output_raw.log"
-    plan_log="$project_dir/plan_log.jsonl"
     
     # Generate the required outputs
     echo "Generating plan outputs for $relative_path..."
@@ -45,7 +44,6 @@ find "$OUTPUTS_DIR" -type f -name "tfplan.tfplan" | while read -r plan_file; do
     
     # Send to Firefly
     ./fireflyci post-plan \
-        -l "$plan_log" \
         -f "$plan_output_json" \
         --plan-output-raw-log-file "$plan_output_raw" \
         --workspace "$workspace_name"
