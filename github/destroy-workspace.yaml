@@ -1,0 +1,80 @@
+name: Destroy Workspaces
+
+on:
+  workflow_dispatch:
+    inputs:
+      destroy:
+        description: Should apply Terraform destroy?
+        type: boolean
+        default: false
+      workspace-path:
+        description: 'Select workspace path to destroy'
+        required: true
+        type: choice
+        options:
+          - aws-stage
+          - aws-prod
+
+jobs:
+  destroy-workspace:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    defaults:
+      run:
+        working-directory: ${{ github.event.inputs.workspace-path }}
+        
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: 1.8.1
+          terraform_wrapper: false
+
+      - name: Initialize Terraform
+        id: init
+        run: terraform init >& init.log
+        continue-on-error: true
+
+      - name: Terraform Plan Destroy
+        id: plan
+        if: steps.init.outcome == 'success'
+        run: |
+          terraform plan -destroy -json -out=tf.plan > plan_log.jsonl && \
+          terraform show -json tf.plan > plan_output.json && \
+          terraform show tf.plan > plan_output_raw.log
+        continue-on-error: true
+
+      - name: Firefly Post Plan Destroy
+        uses: gofireflyio/fireflyci@v0.5.101
+        with:
+          command: post-plan
+          context: ${{ inputs.workspace_path }}
+          init-log-file: init.log
+          plan-json-log-file: plan_log.jsonl
+          plan-output-file: plan_output.json
+          plan-raw-log-file: plan_output_raw.log
+          workspace: ${{ inputs.workspace_path }}
+
+      - name: Terraform Destroy
+        if: github.event.inputs.destroy == true && steps.plan.outcome == 'success'
+        run: terraform apply -destroy -auto-approve -json > apply_log.jsonl
+        continue-on-error: true
+
+      - name: Firefly Post Apply Destroy
+        if: github.event.inputs.destroy == true && steps.plan.outcome == 'success'
+        uses: gofireflyio/fireflyci@v0.5.101
+        with:
+          command: post-apply
+          context: ${{ inputs.workspace_path }}
+          apply-log-file: apply_log.jsonl
+          workspace: ${{ inputs.workspace_path }}
+        continue-on-error: true
+
+      
