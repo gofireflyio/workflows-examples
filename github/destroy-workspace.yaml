@@ -58,12 +58,12 @@ jobs:
         uses: gofireflyio/fireflyci@v0.5.101
         with:
           command: post-plan
-          context: ${{ inputs.workspace_path }}
+          context: ${{ github.event.inputs.workspace-path }}
           init-log-file: init.log
           plan-json-log-file: plan_log.jsonl
           plan-output-file: plan_output.json
           plan-raw-log-file: plan_output_raw.log
-          workspace: ${{ inputs.workspace_path }}
+          workspace: ${{ github.event.inputs.workspace-path }}
 
       - name: Terraform Destroy
         if: github.event.inputs.destroy == true && steps.plan.outcome == 'success'
@@ -75,9 +75,9 @@ jobs:
         uses: gofireflyio/fireflyci@v0.5.101
         with:
           command: post-apply
-          context: ${{ inputs.workspace_path }}
+          context: ${{ github.event.inputs.workspace-path }}
           apply-log-file: apply_log.jsonl
-          workspace: ${{ inputs.workspace_path }}
+          workspace: ${{ github.event.inputs.workspace-path }}
         continue-on-error: true
 
       
