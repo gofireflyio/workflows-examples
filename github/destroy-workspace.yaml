@@ -65,7 +65,7 @@ jobs:
           plan-raw-log-file: plan_output_raw.log
           workspace: ${{ github.event.inputs.workspace-path }}
 
-      - name: Terraform Destroy
+      - name: Terraform Apply Destroy
         if: github.event.inputs.destroy == true && steps.plan.outcome == 'success'
         run: terraform apply -destroy -auto-approve -json > apply_log.jsonl
         continue-on-error: true
