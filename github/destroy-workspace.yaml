@@ -3,7 +3,7 @@ name: Destroy Workspaces
 on:
   workflow_dispatch:
     inputs:
-      destroy:
+      apply:
         description: Should apply Terraform destroy?
         type: boolean
         default: false
@@ -66,12 +66,12 @@ jobs:
           workspace: ${{ github.event.inputs.workspace-path }}
 
       - name: Terraform Apply Destroy
-        if: github.event.inputs.destroy == true && steps.plan.outcome == 'success'
+        if: ${{ github.event.inputs.apply }} == true && steps.plan.outcome == 'success'
         run: terraform apply -destroy -auto-approve -json > apply_log.jsonl
         continue-on-error: true
 
       - name: Firefly Post Apply Destroy
-        if: github.event.inputs.destroy == true && steps.plan.outcome == 'success'
+        if: ${{ github.event.inputs.apply }} == true && steps.plan.outcome == 'success'
         uses: gofireflyio/fireflyci@v0.5.101
         with:
           command: post-apply
