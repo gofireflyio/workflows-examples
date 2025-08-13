@@ -25,8 +25,8 @@ jobs:
       run:
         working-directory: ${{ github.event.inputs.workspace-path }}
     env:
-        FIREFLY_ACCESS_KEY: ${{ secrets.FIREFLY_ACCESS_KEY }}
-        FIREFLY_SECRET_KEY: ${{ secrets.FIREFLY_SECRET_KEY }}
+      FIREFLY_ACCESS_KEY: ${{ secrets.FIREFLY_ACCESS_KEY }}
+      FIREFLY_SECRET_KEY: ${{ secrets.FIREFLY_SECRET_KEY }}
         
     steps:
       - name: Checkout Repository
