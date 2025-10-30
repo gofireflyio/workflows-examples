@@ -1,4 +1,4 @@
-# Firefly + Terragrunt (GitLab) — Executive Summary
+# Firefly + Terragrunt (GitLab)
 
 ## What this adds
 - **Automated post-processing** of Terragrunt logs after plan/apply using the Firefly CI agent.
