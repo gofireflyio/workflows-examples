@@ -364,7 +364,7 @@ post_plan_vpc:
   script:
     - echo "Processing plan logs for VPC module..."
     - cd vpc
-    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "vpc" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "vpc" --terragrunt-version "${TERRAGRUNT_VERSION}" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
     - echo "✓ Post-plan processing completed for VPC"
   dependencies:
     - plan_all
@@ -379,7 +379,7 @@ post_plan_database:
   script:
     - echo "Processing plan logs for Database module..."
     - cd database
-    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "database" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "database" --terragrunt-version "${TERRAGRUNT_VERSION}" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
     - echo "✓ Post-plan processing completed for Database"
   dependencies:
     - plan_all
@@ -394,7 +394,7 @@ post_plan_generator:
   script:
     - echo "Processing plan logs for Generator module..."
     - cd generator
-    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "generator" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "generator" --terragrunt-version "${TERRAGRUNT_VERSION}" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
     - echo "✓ Post-plan processing completed for Generator"
   dependencies:
     - plan_all
@@ -413,7 +413,7 @@ post_apply_vpc:
   script:
     - echo "Processing apply logs for VPC module..."
     - cd vpc
-    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "vpc" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "vpc" --terragrunt-version "${TERRAGRUNT_VERSION}" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
     - echo "✓ Post-apply processing completed for VPC"
   dependencies:
     - apply_all
@@ -432,7 +432,7 @@ post_apply_database:
   script:
     - echo "Processing apply logs for Database module..."
     - cd database
-    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "database" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "database" --terragrunt-version "${TERRAGRUNT_VERSION}" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
     - echo "✓ Post-apply processing completed for Database"
   dependencies:
     - apply_all
@@ -451,7 +451,7 @@ post_apply_generator:
   script:
     - echo "Processing apply logs for Generator module..."
     - cd generator
-    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "generator" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "generator" --terragrunt-version "${TERRAGRUNT_VERSION}" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
     - echo "✓ Post-apply processing completed for Generator"
   dependencies:
     - apply_all

@@ -51,7 +51,6 @@ fireflyci post-plan \
   --workspace "${CI_PROJECT_NAME}" \
   --environment "<module_name>" \
   --terragrunt-version "${TERRAGRUNT_VERSION}" \
-  --server-url "https://api-env3.dev.firefly.ai/api" \
   --access-key "${FIREFLY_ACCESS_KEY}" \
   --secret-key "${FIREFLY_SECRET_KEY}"
 ```
@@ -63,7 +62,6 @@ fireflyci post-apply \
   --workspace "${CI_PROJECT_NAME}" \
   --environment "<module_name>" \
   --terragrunt-version "${TERRAGRUNT_VERSION}" \
-  --server-url "https://api-env3.dev.firefly.ai/api" \
   --access-key "${FIREFLY_ACCESS_KEY}" \
   --secret-key "${FIREFLY_SECRET_KEY}"
 ```
