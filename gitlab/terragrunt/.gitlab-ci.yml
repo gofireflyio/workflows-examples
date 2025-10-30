@@ -1,0 +1,465 @@
+# GitLab CI configuration for running Terragrunt with wrapper script
+# This CI pipeline captures individual module logs using the iac-wrapper.sh script
+#
+# The wrapper script intercepts terraform/opentofu commands and captures:
+# - init_log.jsonl: Initialization logs
+# - plan_log.jsonl: Plan execution logs
+# - plan_output.json: JSON format plan output
+# - plan_output_raw.log: Human-readable plan output
+# - apply_log.jsonl: Apply execution logs
+# - destroy_log.jsonl: Destroy execution logs
+
+variables:
+  # Docker image containing both Terragrunt and Terraform
+  # This image includes pre-installed terraform and terragrunt binaries
+  # Using Terraform 1.5.7 and Terragrunt 0.51.8
+  TERRAGRUNT_IMAGE: "ghcr.io/devops-infra/docker-terragrunt:slim-tf-1.5.7-tg-0.51.8"
+  
+  # Terragrunt version (used for Firefly agent reporting)
+  TERRAGRUNT_VERSION: "0.51.8"
+  
+  # Path where the wrapper script will be placed in the container
+  # If not using docker, set this to the path to the wrapper script on the runner
+  WRAPPER_SCRIPT_PATH: "/tmp/iac-wrapper.sh"
+  
+  # Specify which IaC binary to use: 'terraform' or 'tofu'
+  IAC_BINARY: "terraform"
+  
+  # Firefly credentials (set these as protected variables in GitLab CI/CD settings)
+  # FIREFLY_ACCESS_KEY: $FIREFLY_ACCESS_KEY  # Set in GitLab UI
+  # FIREFLY_SECRET_KEY: $FIREFLY_SECRET_KEY  # Set in GitLab UI
+  
+  # Disable GitLab CI git strategy features that might interfere
+  GIT_STRATEGY: clone
+  GIT_DEPTH: "0"  # Full git history for Firefly agent
+
+# Define stages for the pipeline
+stages:
+  - prepare
+  - validate
+  - plan
+  - post-plan  # Process plan logs with Firefly agent
+  - apply
+  - post-apply  # Process apply logs with Firefly agent
+  - destroy
+
+# Before script runs for all jobs to set up the wrapper
+.setup_wrapper: &setup_wrapper
+  before_script:
+    # Copy the wrapper script to the container
+    - cp scripts/ci-tg-example/iac-wrapper.sh ${WRAPPER_SCRIPT_PATH}
+    
+    # Make the wrapper script executable
+    - chmod +x ${WRAPPER_SCRIPT_PATH}
+    
+    # Set environment variable to point terragrunt to the wrapper
+    # This is used for single-module execution
+    - export TG_TF_PATH=${WRAPPER_SCRIPT_PATH}
+    
+    # Export IAC_BINARY so the wrapper knows which binary to use
+    - export IAC_BINARY=${IAC_BINARY}
+    
+    # Verify setup
+    - echo "Wrapper script setup complete"
+    - echo "TG_TF_PATH=${TG_TF_PATH}"
+    - echo "IAC_BINARY=${IAC_BINARY}"
+    - echo "Using Terragrunt version:"
+    - terragrunt --version
+    - echo "Using ${IAC_BINARY} version:"
+    - ${IAC_BINARY} --version
+
+# Prepare stage - validate wrapper script exists
+validate_wrapper:
+  stage: prepare
+  image: ${TERRAGRUNT_IMAGE}
+  script:
+    - echo "Validating wrapper script..."
+    - |
+      if [ ! -f "scripts/ci-tg-example/iac-wrapper.sh" ]; then
+        echo "ERROR: Wrapper script not found at scripts/ci-tg-example/iac-wrapper.sh"
+        exit 1
+      fi
+    - echo "✓ Wrapper script found"
+    - echo "Checking wrapper script syntax..."
+    - bash -n scripts/ci-tg-example/iac-wrapper.sh
+    - echo "✓ Wrapper script syntax is valid"
+  only:
+    - branches
+    - merge_requests
+
+# Validate Terragrunt configuration
+validate:
+  stage: validate
+  image: ${TERRAGRUNT_IMAGE}
+  <<: *setup_wrapper
+  script:
+    - echo "Validating Terragrunt configuration..."
+    - terragrunt run-all validate
+    - echo "✓ Configuration is valid"
+  only:
+    - branches
+    - merge_requests
+
+# Plan for all modules (run-all mode)
+# IMPORTANT: For run-all, the --tf-path flag must be passed explicitly
+# Using just TG_TF_PATH environment variable is not sufficient for run-all mode
+plan_all:
+  stage: plan
+  image: ${TERRAGRUNT_IMAGE}
+  <<: *setup_wrapper
+  script:
+    - echo "Running terragrunt plan for all modules..."
+    - echo "This will create individual logs in each module directory"
+    
+    # CRITICAL: Use --terragrunt-tfpath flag explicitly for run-all mode
+    # The TG_TF_PATH environment variable alone is not sufficient
+    # See: scripts/ci-tg-example/README.md for explanation
+    - terragrunt run-all --terragrunt-tfpath=${WRAPPER_SCRIPT_PATH} plan -json -out=tfplan
+    
+    - echo "✓ Plan completed for all modules"
+    - echo ""
+    - echo "Generated files:"
+    - find . -name "*.jsonl" -o -name "plan_output*.json" -o -name "plan_output*.log" -o -name "tfplan" | grep -v ".terragrunt-cache" | sort
+  artifacts:
+    # Save all generated logs and plan files
+    name: "terragrunt-plan-all-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - "*/plan_log.jsonl"
+      - "*/plan_output.json"
+      - "*/plan_output_raw.log"
+      - "*/tfplan"
+      - "*/init_log.jsonl"
+    expire_in: 7 days
+    when: always
+  only:
+    - branches
+    - merge_requests
+
+# Plan for a single module (VPC)
+# This demonstrates single-module execution using TG_TF_PATH env var
+# NOTE: This is optional since plan_all already handles all modules
+plan_vpc_OPTIONAL:
+  stage: plan
+  image: ${TERRAGRUNT_IMAGE}
+  <<: *setup_wrapper
+  script:
+    - echo "Running terragrunt plan for VPC module only..."
+    - cd vpc
+    
+    # For single module, TG_TF_PATH environment variable is sufficient
+    - terragrunt plan -json -out=tfplan-vpc
+    
+    - echo "✓ VPC plan completed"
+    - echo ""
+    - echo "Generated files in vpc/:"
+    - ls -lh *.jsonl *.json *.log tfplan-vpc 2>/dev/null || echo "Some files not generated"
+  artifacts:
+    name: "terragrunt-plan-vpc-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - "vpc/plan_log.jsonl"
+      - "vpc/plan_output.json"
+      - "vpc/plan_output_raw.log"
+      - "vpc/tfplan-vpc"
+      - "vpc/init_log.jsonl"
+    expire_in: 7 days
+    when: always
+  only:
+    - branches
+    - merge_requests
+  when: manual  # Optional - plan_all already handles this
+
+# Apply for all modules (run-all mode)
+# This will use the plan files generated in the plan stage
+apply_all:
+  stage: apply
+  image: ${TERRAGRUNT_IMAGE}
+  <<: *setup_wrapper
+  script:
+    - echo "Running terragrunt apply for all modules..."
+    
+    # Apply using the plan file from previous stage
+    # CRITICAL: Use --terragrunt-tfpath flag explicitly for run-all mode
+    # Use --terragrunt-non-interactive to skip confirmation prompts
+    - terragrunt run-all --terragrunt-non-interactive --terragrunt-tfpath=${WRAPPER_SCRIPT_PATH} apply -json -auto-approve tfplan
+    
+    - echo "✓ Apply completed for all modules"
+    - echo ""
+    - echo "Generated files:"
+    - find . -name "apply_log.jsonl" | grep -v ".terragrunt-cache" | sort
+  artifacts:
+    name: "terragrunt-apply-all-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - "*/apply_log.jsonl"
+      - "*/terraform.tfstate"
+    expire_in: 7 days
+    when: always
+  dependencies:
+    - plan_all
+  only:
+    - branches
+    - merge_requests
+  when: manual  # Require manual approval before applying
+
+# Apply for a single module (VPC)
+# NOTE: This is optional since apply_all already handles all modules
+apply_vpc_OPTIONAL:
+  stage: apply
+  image: ${TERRAGRUNT_IMAGE}
+  <<: *setup_wrapper
+  script:
+    - echo "Running terragrunt apply for VPC module only..."
+    - cd vpc
+    
+    # Apply using the plan file from previous stage
+    - terragrunt apply -json -auto-approve tfplan-vpc
+    
+    - echo "✓ VPC apply completed"
+  artifacts:
+    name: "terragrunt-apply-vpc-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - "vpc/apply_log.jsonl"
+      - "vpc/terraform.tfstate"
+    expire_in: 7 days
+    when: always
+  dependencies:
+    - plan_vpc_OPTIONAL
+  only:
+    - branches
+    - merge_requests
+  when: manual  # Optional - apply_all already handles this
+
+# Destroy all resources (run-all mode)
+destroy_all:
+  stage: destroy
+  image: ${TERRAGRUNT_IMAGE}
+  <<: *setup_wrapper
+  script:
+    - echo "Running terragrunt destroy for all modules..."
+    
+    # CRITICAL: Use --terragrunt-tfpath flag explicitly for run-all mode
+    # Use --terragrunt-non-interactive to skip confirmation prompts
+    - terragrunt run-all --terragrunt-non-interactive --terragrunt-tfpath=${WRAPPER_SCRIPT_PATH} destroy -json -auto-approve
+    
+    - echo "✓ Destroy completed for all modules"
+    - echo ""
+    - echo "Generated files:"
+    - find . -name "destroy_log.jsonl" | grep -v ".terragrunt-cache" | sort
+  artifacts:
+    name: "terragrunt-destroy-all-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - "*/destroy_log.jsonl"
+    expire_in: 7 days
+    when: always
+  only:
+    - branches
+    - merge_requests
+  when: manual  # Require manual approval before destroying
+
+# Optional: Job to demonstrate using OpenTofu instead of Terraform
+plan_all_opentofu_OPTIONAL:
+  stage: plan
+  image: "ghcr.io/devops-infra/docker-terragrunt:slim-ot-latest"
+  variables:
+    IAC_BINARY: "tofu"  # Override to use OpenTofu
+  <<: *setup_wrapper
+  script:
+    - echo "Running terragrunt plan with OpenTofu for all modules..."
+    
+    # The wrapper script will use 'tofu' binary instead of 'terraform'
+    - terragrunt run-all --terragrunt-tfpath=${WRAPPER_SCRIPT_PATH} plan -json -out=tfplan
+    
+    - echo "✓ Plan completed for all modules using OpenTofu"
+  artifacts:
+    name: "terragrunt-plan-opentofu-${CI_COMMIT_REF_SLUG}-${CI_COMMIT_SHORT_SHA}"
+    paths:
+      - "*/plan_log.jsonl"
+      - "*/plan_output.json"
+      - "*/plan_output_raw.log"
+      - "*/tfplan"
+    expire_in: 7 days
+    when: always
+  only:
+    - branches
+    - merge_requests
+  when: manual  # This is optional, so make it manual
+
+# Optional: Job to verify log isolation
+# This checks that logs are properly isolated per module
+verify_logs:
+  stage: plan
+  image: ${TERRAGRUNT_IMAGE}
+  script:
+    - echo "Verifying log isolation..."
+    
+    # Check VPC logs
+    - |
+      if [ -f "vpc/plan_log.jsonl" ]; then
+        echo "Checking VPC logs..."
+        if grep -q "null_resource.vpc" vpc/plan_log.jsonl; then
+          echo "✓ VPC logs contain VPC resources"
+        else
+          echo "✗ VPC logs missing VPC resources"
+          exit 1
+        fi
+        
+        if grep -q "null_resource.database" vpc/plan_log.jsonl; then
+          echo "✗ VPC logs incorrectly contain database resources (logs not isolated!)"
+          exit 1
+        else
+          echo "✓ VPC logs correctly isolated (no database resources)"
+        fi
+      fi
+    
+    # Check Database logs
+    - |
+      if [ -f "database/plan_log.jsonl" ]; then
+        echo "Checking Database logs..."
+        if grep -q "null_resource.database" database/plan_log.jsonl; then
+          echo "✓ Database logs contain database resources"
+        else
+          echo "✗ Database logs missing database resources"
+          exit 1
+        fi
+      fi
+    
+    - echo "✓ Log isolation verified successfully"
+  dependencies:
+    - plan_all
+  only:
+    - branches
+    - merge_requests
+
+# ============================================================================
+# POST-PLAN STAGE - Process plan logs with Firefly agent
+# ============================================================================
+
+# Template for Firefly agent jobs
+.firefly_agent: &firefly_agent
+  image: alpine:latest
+  before_script:
+    - echo "Setting up Firefly CI Agent..."
+    - apk add --no-cache curl
+    - echo "Downloading fireflyci binary..."
+    - curl -O https://gofirefly-prod-iac-ci-cli-binaries.s3.amazonaws.com/fireflyci/latest/fireflyci_Linux_x86_64.tar.gz
+    - tar -xf fireflyci_Linux_x86_64.tar.gz
+    - chmod +x fireflyci
+    - mv fireflyci /usr/local/bin/
+    - echo "Firefly CI Agent version:"
+    - fireflyci version || echo "fireflyci binary ready"
+    - echo "Verifying Firefly credentials..."
+    - |
+      if [ -z "$FIREFLY_ACCESS_KEY" ] || [ -z "$FIREFLY_SECRET_KEY" ]; then
+        echo "ERROR: Firefly credentials not set!"
+        echo "Please set FIREFLY_ACCESS_KEY and FIREFLY_SECRET_KEY in GitLab CI/CD settings"
+        exit 1
+      fi
+    - echo "✓ Firefly credentials configured"
+  script:
+    - echo "Firefly agent job - override this script in individual jobs"
+
+# Post-plan processing for VPC module
+post_plan_vpc:
+  <<: *firefly_agent
+  stage: post-plan
+  script:
+    - echo "Processing plan logs for VPC module..."
+    - cd vpc
+    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "vpc" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - echo "✓ Post-plan processing completed for VPC"
+  dependencies:
+    - plan_all
+  only:
+    - branches
+    - merge_requests
+
+# Post-plan processing for Database module
+post_plan_database:
+  <<: *firefly_agent
+  stage: post-plan
+  script:
+    - echo "Processing plan logs for Database module..."
+    - cd database
+    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "database" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - echo "✓ Post-plan processing completed for Database"
+  dependencies:
+    - plan_all
+  only:
+    - branches
+    - merge_requests
+
+# Post-plan processing for Generator module
+post_plan_generator:
+  <<: *firefly_agent
+  stage: post-plan
+  script:
+    - echo "Processing plan logs for Generator module..."
+    - cd generator
+    - fireflyci post-plan -l plan_log.jsonl -f plan_output.json -i init_log.jsonl --plan-output-raw-log-file plan_output_raw.log --workspace "${CI_PROJECT_NAME}" --environment "generator" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - echo "✓ Post-plan processing completed for Generator"
+  dependencies:
+    - plan_all
+  only:
+    - branches
+    - merge_requests
+
+# ============================================================================
+# POST-APPLY STAGE - Process apply logs with Firefly agent
+# ============================================================================
+
+# Post-apply processing for VPC module
+post_apply_vpc:
+  <<: *firefly_agent
+  stage: post-apply
+  script:
+    - echo "Processing apply logs for VPC module..."
+    - cd vpc
+    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "vpc" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - echo "✓ Post-apply processing completed for VPC"
+  dependencies:
+    - apply_all
+  only:
+    - branches
+    - merge_requests
+  needs:
+    - job: apply_all
+      optional: false
+  when: on_success  # Run automatically only if apply_all succeeds
+
+# Post-apply processing for Database module
+post_apply_database:
+  <<: *firefly_agent
+  stage: post-apply
+  script:
+    - echo "Processing apply logs for Database module..."
+    - cd database
+    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "database" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - echo "✓ Post-apply processing completed for Database"
+  dependencies:
+    - apply_all
+  only:
+    - branches
+    - merge_requests
+  needs:
+    - job: apply_all
+      optional: false
+  when: on_success  # Run automatically only if apply_all succeeds
+
+# Post-apply processing for Generator module
+post_apply_generator:
+  <<: *firefly_agent
+  stage: post-apply
+  script:
+    - echo "Processing apply logs for Generator module..."
+    - cd generator
+    - fireflyci post-apply -f apply_log.jsonl --workspace "${CI_PROJECT_NAME}" --environment "generator" --terragrunt-version "${TERRAGRUNT_VERSION}" --server-url "https://api-env3.dev.firefly.ai/api" -a "${FIREFLY_ACCESS_KEY}" -s "${FIREFLY_SECRET_KEY}"
+    - echo "✓ Post-apply processing completed for Generator"
+  dependencies:
+    - apply_all
+  only:
+    - branches
+    - merge_requests
+  needs:
+    - job: apply_all
+      optional: false
+  when: on_success  # Run automatically only if apply_all succeeds
+
