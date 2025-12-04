@@ -1,0 +1,98 @@
+name: Example Terragrunt Workflow with Firefly
+
+on:
+  workflow_dispatch:
+    inputs:
+      terragrunt_version:
+        required: false
+        type: string
+        default: '0.68.0'
+        description: 'Terragrunt version to use'
+      terraform_version:
+        required: false
+        type: string
+        default: '1.8.1'
+        description: 'Terraform version to use'
+      should_apply:
+        required: false
+        type: boolean
+        default: false
+        description: 'Whether to apply the Terraform changes'
+
+
+jobs:
+  terragrunt-plan:
+    runs-on: ubuntu-latest
+    
+    env:
+      PLAN_FILE_NAME: "tf.plan"
+      WORKSPACE: ${{ github.repository}}
+      INIT_LOG_FILE: "init_log.jsonl"
+      PLAN_OUTPUT_FILE: "plan_output.json"
+      PLAN_JSON_LOG_FILE: "plan_log.jsonl"
+      PLAN_RAW_LOG_FILE: "plan_output_raw.log"
+      APPLY_LOG_FILE: "apply_log.jsonl"
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+            fetch-depth: 0
+
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: ${{ inputs.terraform_version }}
+          terraform_wrapper: false
+
+      - name: Setup Terragrunt
+        run: |
+          sudo wget -q -O /usr/local/bin/terragrunt https://github.com/gruntwork-io/terragrunt/releases/download/v${{ inputs.terragrunt_version }}/terragrunt_linux_amd64
+          sudo chmod +x /usr/local/bin/terragrunt
+          terragrunt --version
+
+      - name: Setup IAC Wrapper
+        uses: gofireflyio/fireflyci/terragrunt@v0.5.153
+
+      - name: Initialize Terragrunt
+        run: terragrunt run-all init
+
+      - name: Terragrunt Plan
+        id: plan
+        run: terragrunt run-all plan -- -json -out=${{ env.PLAN_FILE_NAME }}
+          
+      # Repeat the block below for each module
+      - name: Firefly Post Plan - ModuleName
+        uses: gofireflyio/fireflyci@v0.5.153
+        with:
+          command: post-plan
+          environment: ModuleName # Replace with the name of the module
+          workspace: ${{ env.WORKSPACE }}
+          terragrunt-version: ${{ inputs.terragrunt_version }}
+          init-log-file: ModuleName/${{ env.INIT_LOG_FILE }} # Replace with the name of the module
+          plan-output-file: ModuleName/${{ env.PLAN_OUTPUT_FILE }} # Replace with the name of the module
+          plan-json-log-file: ModuleName/${{ env.PLAN_JSON_LOG_FILE }} # Replace with the name of the module
+          plan-raw-log-file: ModuleName/${{ env.PLAN_RAW_LOG_FILE }} # Replace with the name of the module
+        env:
+          FIREFLY_ACCESS_KEY: ${{ secrets.FIREFLY_ACCESS_KEY }}
+          FIREFLY_SECRET_KEY: ${{ secrets.FIREFLY_SECRET_KEY }}
+
+      - name: Terragrunt Apply
+        id: apply
+        if: inputs.should_apply == true && steps.plan.outcome == 'success'
+        run: terragrunt run-all apply --terragrunt-non-interactive -- -auto-approve -json
+
+     # Repeat the block below for each module
+      - name: Firefly Post Apply - ModuleName
+        if: inputs.should_apply == true && steps.apply.outcome == 'success'
+        uses: gofireflyio/fireflyci@v0.5.153
+        with:
+          command: post-apply
+          environment: ModuleName # Replace with the name of the module
+          workspace: ${{ env.WORKSPACE }}
+          terragrunt-version: ${{ inputs.terragrunt_version }}
+          apply-log-file: ModuleName/${{ env.APPLY_LOG_FILE }} # Replace with the name of the module
+        env:
+          FIREFLY_ACCESS_KEY: ${{ secrets.FIREFLY_ACCESS_KEY }}
+          FIREFLY_SECRET_KEY: ${{ secrets.FIREFLY_SECRET_KEY }}
+
