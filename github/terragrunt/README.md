@@ -17,7 +17,7 @@
    - Add the following step after setting up Terraform/Terragrunt:
    ```yaml
    - name: Setup IAC Wrapper
-     uses: gofireflyio/fireflyci/terragrunt@v0.5.153
+     uses: gofireflyio/fireflyci/terragrunt@v0.6.3
    ```
    - This configures the Terragrunt wrapper to capture logs during plan/apply operations per subfolder.
 
@@ -32,7 +32,7 @@
    - Copy and update this block for each module:
    ```yaml
    - name: Firefly Post Plan - ModuleName
-     uses: gofireflyio/fireflyci@v0.5.153
+     uses: gofireflyio/fireflyci@v0.6.3
      with:
        command: post-plan
        environment: ModuleName
@@ -52,7 +52,7 @@
    ```yaml
    - name: Firefly Post Apply - ModuleName
      if: inputs.should_apply == true && steps.apply.outcome == 'success'
-     uses: gofireflyio/fireflyci@v0.5.153
+     uses: gofireflyio/fireflyci@v0.6.3
      with:
        command: post-apply
        environment: ModuleName

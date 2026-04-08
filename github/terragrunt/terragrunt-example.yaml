@@ -52,7 +52,7 @@ jobs:
           terragrunt --version
 
       - name: Setup IAC Wrapper
-        uses: gofireflyio/fireflyci/terragrunt@v0.5.153
+        uses: gofireflyio/fireflyci/terragrunt@v0.6.3
 
       - name: Initialize Terragrunt
         run: terragrunt run-all init
@@ -63,7 +63,7 @@ jobs:
           
       # Repeat the block below for each module
       - name: Firefly Post Plan - ModuleName
-        uses: gofireflyio/fireflyci@v0.5.153
+        uses: gofireflyio/fireflyci@v0.6.3
         with:
           command: post-plan
           environment: ModuleName # Replace with the name of the module
@@ -85,7 +85,7 @@ jobs:
      # Repeat the block below for each module
       - name: Firefly Post Apply - ModuleName
         if: inputs.should_apply == true && steps.apply.outcome == 'success'
-        uses: gofireflyio/fireflyci@v0.5.153
+        uses: gofireflyio/fireflyci@v0.6.3
         with:
           command: post-apply
           environment: ModuleName # Replace with the name of the module
