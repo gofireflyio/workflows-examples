@@ -81,7 +81,7 @@ validate_wrapper:
       fi
     - echo "✓ Wrapper script found"
     - echo "Checking wrapper script syntax..."
-    - bash -n scripts/ci-tg-example/iac-wrapper.sh
+    - sh -n scripts/ci-tg-example/iac-wrapper.sh
     - echo "✓ Wrapper script syntax is valid"
   only:
     - branches
