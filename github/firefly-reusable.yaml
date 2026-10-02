@@ -64,7 +64,7 @@ jobs:
         continue-on-error: true
 
       - name: Firefly Post Plan
-        uses: gofireflyio/fireflyci@v0.5.101
+        uses: gofireflyio/fireflyci@v0.6.22
         with:
           command: post-plan
           context: ${{ inputs.workspace_path }}
@@ -81,7 +81,7 @@ jobs:
 
       - name: Firefly Post Apply
         if: inputs.should_apply == true && steps.plan.outcome == 'success'
-        uses: gofireflyio/fireflyci@v0.5.101
+        uses: gofireflyio/fireflyci@v0.6.22
         with:
           command: post-apply
           context: ${{ inputs.workspace_path }}

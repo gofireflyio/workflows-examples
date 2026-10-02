@@ -32,7 +32,7 @@
    - Copy and update this block for each module:
    ```yaml
    - name: Firefly Post Plan - ModuleName
-     uses: gofireflyio/fireflyci@v0.6.3
+     uses: gofireflyio/fireflyci@v0.6.22
      with:
        command: post-plan
        environment: ModuleName
@@ -52,7 +52,7 @@
    ```yaml
    - name: Firefly Post Apply - ModuleName
      if: inputs.should_apply == true && steps.apply.outcome == 'success'
-     uses: gofireflyio/fireflyci@v0.6.3
+     uses: gofireflyio/fireflyci@v0.6.22
      with:
        command: post-apply
        environment: ModuleName
