@@ -333,7 +333,7 @@ This approach automatically processes all modules without needing separate jobs 
 ```yaml
 .firefly_agent: &firefly_agent
   image:
-    name: public.ecr.aws/firefly/fireflyci:v0.5.149
+    name: public.ecr.aws/firefly/fireflyci:latest
     entrypoint: ["/bin/sh", "-c"]  # ← This is required!
   # ... rest of configuration
 ```
