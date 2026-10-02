@@ -75,7 +75,7 @@ stages:
       displayName: Install Docker
     - template: azure-pipelines.fireflyci-template.yaml
       parameters:
-        version: v0.6.44
+        version: latest
         command: post-plan
         context: azure-stag
         initLogFile: init.log
@@ -94,7 +94,7 @@ stages:
       displayName: Terraform Apply
     - template: azure-pipelines.fireflyci-template.yaml
       parameters:
-        version: v0.6.44
+        version: latest
         command: post-apply
         context: azure-stag
         applyLogFile: apply_log.jsonl
